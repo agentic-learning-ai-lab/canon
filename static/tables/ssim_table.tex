@@ -1,0 +1,19 @@
+\documentclass[border=8pt]{standalone}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{amsmath}
+\usepackage{newtxtext,newtxmath}
+\definecolor{canonblue}{HTML}{E8F0FE}
+\setlength{\tabcolsep}{12pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{document}
+\begin{tabular}{lcc}
+  \toprule
+  \textbf{Method} & \textbf{ID} & \textbf{OOD} \\
+  \midrule
+  ReViWo & $-0.005$ & $-0.145$ \\
+  VILA   & $-0.372$ & $-0.271$ \\
+  \rowcolor{canonblue}\textbf{CANON} & $\mathbf{+0.384}$ & $\mathbf{+0.296}$ \\
+  \bottomrule
+\end{tabular}
+\end{document}

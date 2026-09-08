@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Canonical is a self-supervised pretraining method that learns viewpoint-robust visual representations from paired multi-view demonstrations, enabling visuomotor policies to generalize to unseen camera angles without calibration.">
+  <meta property="og:title" content="Canonical Observation Pretraining for Visuomotor Control"/>
+  <meta property="og:description" content="Canonical is a self-supervised pretraining method that learns viewpoint-robust visual representations from paired multi-view demonstrations, enabling visuomotor policies to generalize to unseen camera angles without calibration."/>
+  <meta property="og:url" content="https://agenticlearning.ai/canonical/"/>
+  <meta property="og:image" content="https://agenticlearning.ai/canonical/static/images/method.png"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+
+  <meta name="twitter:title" content="Canonical Observation Pretraining for Visuomotor Control">
+  <meta name="twitter:description" content="Canonical is a self-supervised pretraining method that learns viewpoint-robust visual representations from paired multi-view demonstrations, enabling visuomotor policies to generalize to unseen camera angles without calibration.">
+  <meta name="twitter:image" content="https://agenticlearning.ai/canonical/static/images/method.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="keywords" content="self-supervised learning, viewpoint robustness, visuomotor control, imitation learning, robot manipulation, SO(3), canonical observation">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Canonical</title>
+  <link rel="icon" type="image/svg+xml" href="static/images/canon.svg">
+  <link rel="icon" type="image/x-icon" href="static/images/canon.ico">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="https://agenticlearning.ai/css/lab-theme.css">
+  <link rel="stylesheet" href="static/css/index.css?v=2">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js?v=2"></script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<!-- Lab Header -->
+<div style="background-color: #fff; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 2rem;">
+  <a href="https://agenticlearning.ai/" style="text-decoration: none; color: #000; display: inline-block;">
+    <img src="/assets/images/logos/logo.svg" alt="Agentic Learning AI Lab"
+      style="height: 80px; max-width: 200px; width: auto; display: block; padding-bottom: 15px">
+  </a>
+</div>
+
+<!-- Title / Authors / Links -->
+<section class="hero">
+  <div class="hero-body" style="padding-bottom: 0;">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">Canonical Observation Pretraining for Visuomotor Control</h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://xavhl.github.io/" target="_blank">Yuen-Hei Yeung</a>,</span>
+            <span class="author-block">
+              <a href="https://www.chrishoang.com/" target="_blank">Chris Hoang</a>,</span>
+            <span class="author-block">
+              <a href="http://zifanzhao.com/" target="_blank">Zifan Zhao</a>,</span>
+            <span class="author-block">
+              <a href="https://mengyeren.com/" target="_blank">Mengye Ren</a></span>
+          </div>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><small>New York University</small></span>
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- Code -->
+              <span class="link-block">
+                <a href="https://github.com/agentic-learning-ai-lab/canonical" target="_blank"
+                class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fab fa-github"></i></span>
+                <span>Code</span>
+                </a>
+              </span>
+
+              <!-- Model -->
+              <span class="link-block">
+                <a href="https://huggingface.co/agentic-learning-ai-lab/canonical" target="_blank"
+                class="external-link button is-normal is-rounded is-dark">
+                <span class="icon">🤗</span>
+                <span>Model</span>
+                </a>
+              </span>
+
+              <!-- Dataset -->
+              <span class="link-block">
+                <a href="https://huggingface.co/datasets/agentic-learning-ai-lab/canonical" target="_blank"
+                class="external-link button is-normal is-rounded is-dark">
+                <span class="icon">🤗</span>
+                <span>Dataset</span>
+                </a>
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TL;DR -->
+<section class="hero is-small" style="margin: 0; padding: 0;">
+  <div class="hero-body" style="padding: 0;">
+    <div class="container">
+      <div class="columns is-centered" style="margin: 0;">
+        <div class="column is-four-fifths" style="padding: 0.5rem 0.75rem;">
+          <div style="background-color: #f5f1eb; border-radius: 12px; padding: 1rem 1.5rem; text-align: left;">
+            <p style="margin-bottom: 0;"><strong>TL;DR:</strong> Canonical pretrains visual representations by modeling camera viewpoint change as an SO(3) rotation in latent space, allowing visuomotor policies to generalize to unseen camera angles without calibration.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Abstract -->
+<section class="hero is-small" style="margin: 0; padding: 0;">
+  <div class="hero-body" style="padding: 0;">
+    <div class="container">
+      <div class="columns is-centered" style="margin: 0;">
+        <div class="column is-four-fifths" style="padding: 0.25rem 0.75rem;">
+          <h2 class="title" style="margin-bottom: 0.25rem;">Overview</h2>
+          <p class="content">
+            Visuomotor policies learned from human demonstrations are brittle to camera viewpoint changes. Existing remedies each make a different assumption: novel-view synthesis needs a rendering pipeline, equivariant architectures need 3D inputs or a symmetry group hard-coded into the network, and view-invariant pretraining needs only multi-view RGB but suppresses viewpoint entirely, leaving no mechanism for extrapolating to a new one.
+            We present <b>Canonical</b>, a self-supervised pretraining method that instead keeps viewpoint as a recoverable latent factor: it models camera viewpoint change as a rotation in SO(3) and warps features into a shared canonical frame before the policy, which is left unchanged.
+            Pretraining uses multi-view RGB and the camera angle; at deployment, an angle predictor recovers the rotation from the image itself, requiring no pose information.
+            Canonical generalizes to camera viewpoints unseen during policy training on both MetaWorld and LIBERO-Goal, outperforming the strongest multi-view baseline by 83% and 56%, and remains the strongest method at unseen viewpoints on a real-world xArm robot.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Overview -->
+<section class="hero is-small" style="margin: 0; padding: 0;">
+  <div class="hero-body" style="padding: 0;">
+    <div class="container">
+      <div class="columns is-centered" style="margin: 0;">
+        <div class="column is-four-fifths" style="padding: 0.25rem 0.75rem;">
+          <h3 class="title is-4" style="margin-bottom: 0.25rem;">Contributions</h3>
+          <ul class="content" style="margin-bottom: 0;">
+            <li><b>SO(3) latent dynamics for viewpoints</b>: Canonical models camera viewpoint change as an explicit rotation operator in latent space, enabling generalization to angles outside the training distribution.</li>
+            <li><b>Self-calibrating deployment</b>: An angle predictor infers the camera rotation at test time from a single observation, mapping features to a canonical view with no external pose information required.</li>
+            <li><b>Empirical results</b>: Canonical substantially outperforms internet-scale pretrained, self-supervised, and multi-view encoder baselines on MetaWorld, LIBERO-Goal, and real-world xArm tasks.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Method -->
+<section class="hero is-small">
+  <div class="hero-body" style="padding-top: 1rem;">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title">Method</h2>
+          <hr>
+        </div>
+      </div>
+      <div class="columns is-centered image-container">
+        <div class="column is-four-fifths">
+          <figure class="image">
+            <img src="static/images/method.png" alt="Canonical method: pretraining and self-calibrating inference" style="width: 100%; max-width: 720px; height: auto; display: block; margin: 0 auto;">
+          </figure>
+          <figcaption class="has-text-centered">Canonical pretraining (top) and self-calibrating inference (bottom).</figcaption>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column is-size-5 is-four-fifths">
+          Canonical consists of three learned components: a <b>visual encoder</b> \(f_\phi\) that maps observations to spatial feature maps \(\mathbf{z}\); a lightweight <b>view predictor</b> \(g_\omega\) that estimates the camera rotation relative to the canonical viewpoint, supervised by geodesic distance loss \(\mathcal{L}_\text{angle}\); and a transformer-based <b>view forward module</b> \(h_\psi\) that maps features between viewpoints conditioned on a continuous 6D rotation representation.
+          During pretraining, a symmetric canonical consistency loss \(\mathcal{L}_\text{canonical}\) and cross-view loss \(\mathcal{L}_\text{xview}\) are applied over paired multi-view observations, with VICReg regularization to prevent collapse.
+          At deployment, the encoder and view predictor infer \(\hat{\mathbf{R}} \in SO(3)\) from a single observation and rotate features to the canonical space.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Results -->
+<section class="hero is-small">
+  <div class="hero-body" style="padding-top: 1rem;">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title">Evaluations</h2>
+          <hr>
+        </div>
+      </div>
+      <div class="columns is-centered" style="margin-top: 1rem;">
+        <div class="column is-four-fifths">
+          <h3 class="title is-4" style="margin-bottom: 0.4rem;">SO(3) viewpoint variation: MetaWorld</h3>
+          <p class="is-size-6">MetaWorld tests viewpoint shifts with fixed cameras spanning azimuth <i>and</i> elevation; a policy trained from a single canonical view is evaluated as the camera circles the scene.</p>
+        </div>
+      </div>
+      <div class="columns is-centered image-container" style="margin-top: 1rem;">
+        <div class="column is-four-fifths">
+          <figure class="image">
+            <img src="static/images/metaworld.png" alt="MetaWorld results" style="width: 100%; max-width: 100%; height: auto; display: block; margin: 0 auto;">
+          </figure>
+          <figcaption class="has-text-centered">MetaWorld per-task success rates under SO(3) viewpoint variation, averaged over in-distribution (ID) and out-of-distribution (OOD) cameras.</figcaption>
+        </div>
+      </div>
+      <div class="columns is-centered image-container" style="margin-top: 1rem;">
+        <div class="column is-four-fifths">
+          <figure class="image">
+            <img src="static/images/sweep_mw.png?v=3" alt="MetaWorld success rate vs camera azimuth" style="width: 100%; height: auto;">
+          </figure>
+          <figcaption class="has-text-centered">Per-camera success across the ten rollout azimuths (green = ID, red = OOD; dashed = canonical training view). Canonical (cyan) stays flat where the baselines peak at the training view and fall off.</figcaption>
+        </div>
+      </div>
+
+      <div class="columns is-centered" style="margin-top: 1.5rem;">
+        <div class="column is-four-fifths">
+          <h3 class="title is-4" style="margin-bottom: 0.4rem;">Long-horizon manipulation: LIBERO-Goal</h3>
+          <p class="is-size-6">LIBERO-Goal adds a distinct robot embodiment, a richer scene, and multi-step tasks (for example, opening a drawer and then placing a bowl inside), testing whether the canonicalization carries over to long-horizon control. Occlusion from tabletop objects limits the meaningful azimuth range to roughly &plusmn;20&deg;.</p>
+        </div>
+      </div>
+      <div class="columns is-centered image-container" style="margin-top: 1rem;">
+        <div class="column is-half">
+          <figure class="image">
+            <img src="static/images/libero.png" alt="LIBERO-Goal results" style="width: 100%; max-width: 456px; height: auto; display: block; margin: 0 auto;">
+          </figure>
+          <figcaption class="has-text-centered">LIBERO-Goal success rates under azimuth variation, averaged over ID and OOD cameras.</figcaption>
+        </div>
+      </div>
+      <div class="columns is-centered image-container" style="margin-top: 1rem;">
+        <div class="column is-four-fifths">
+          <figure class="image">
+            <img src="static/images/sweep_libero.png" alt="LIBERO-Goal success rate vs camera azimuth" style="width: 100%; height: auto;">
+          </figure>
+          <figcaption class="has-text-centered">Per-camera success across azimuth, extended to &plusmn;40&deg; (dashed = training view &theta; = 0&deg;). Canonical (cyan) holds within the &plusmn;20&deg; pretraining range; past &plusmn;30&deg; every method falls toward zero as tabletop objects occlude the workspace.</figcaption>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Real-World Robot: xArm -->
+<section class="hero is-small">
+  <div class="hero-body" style="padding-top: 1rem;">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <h3 class="title is-4">Real-world robot: xArm</h3>
+          <hr>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column is-size-5 is-four-fifths">
+          We validate Canonical on a physical UFACTORY xArm 7 across three manipulation tasks: <b>button press</b>, <b>pick-and-place</b>, and <b>drawer close</b>. The policy is trained from a single canonical camera and, at test time, is deployed from unseen, uncalibrated camera rotations with no pose information provided. Each task is evaluated at two in-distribution and two out-of-distribution angles, 10 trials each.
+        </div>
+      </div>
+      <div class="columns is-centered image-container" style="margin-top: 1rem;">
+        <div class="column is-four-fifths">
+          <figure class="image">
+            <img src="static/images/xarm.png?v=2" alt="xArm real-world success rates" style="width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto;">
+          </figure>
+          <figcaption class="has-text-centered">Success rates on xArm, pooled over each split's two cameras (20 trials per split). ID: the in-distribution encoder-pretraining cameras (160&deg;, 300&deg;); OOD: the held-out cameras (280&deg;, 250&deg;).</figcaption>
+        </div>
+      </div>
+
+      <div class="columns is-centered" style="margin-top: 1.5rem;">
+        <div class="column is-four-fifths">
+          <h3 class="title is-4" style="margin-bottom: 0.4rem;">Policy rollouts</h3>
+          <p class="is-size-6">At test time, Canonical estimates the camera rotation from the observation and canonicalizes features before they reach the policy. Each carousel shows rollouts of one task recorded from different held-out camera views.</p>
+        </div>
+      </div>
+
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <div class="columns">
+        <div class="column">
+          <p class="rollout-task">Button press</p>
+          <div class="manual-carousel">
+            <div class="mc-viewport">
+              <video class="mc-slide is-active" style="display:block" src="static/demos/original/canon_webpage/buttonpress0.mp4" autoplay loop muted playsinline></video>
+              <video class="mc-slide" style="display:none" src="static/demos/original/canon_webpage/buttonpress1.mp4" loop muted playsinline></video>
+              <video class="mc-slide" style="display:none" src="static/demos/original/canon_webpage/buttonpress2.mp4" loop muted playsinline></video>
+            </div>
+            <div class="mc-nav">
+              <button class="mc-btn mc-prev" aria-label="Previous demo">&#8249;</button>
+              <span class="mc-counter">1 / 3</span>
+              <button class="mc-btn mc-next" aria-label="Next demo">&#8250;</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <p class="rollout-task">Pick-and-place</p>
+          <div class="manual-carousel">
+            <div class="mc-viewport">
+              <video class="mc-slide is-active" style="display:block" src="static/demos/original/canon_webpage/pickplace0.mp4" autoplay loop muted playsinline></video>
+              <video class="mc-slide" style="display:none" src="static/demos/original/canon_webpage/pickplace1.mp4" loop muted playsinline></video>
+              <video class="mc-slide" style="display:none" src="static/demos/original/canon_webpage/pickplace2.mp4" loop muted playsinline></video>
+            </div>
+            <div class="mc-nav">
+              <button class="mc-btn mc-prev" aria-label="Previous demo">&#8249;</button>
+              <span class="mc-counter">1 / 3</span>
+              <button class="mc-btn mc-next" aria-label="Next demo">&#8250;</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <p class="rollout-task">Drawer close</p>
+          <div class="manual-carousel">
+            <div class="mc-viewport">
+              <video class="mc-slide is-active" style="display:block" src="static/demos/original/canon_webpage/drawerclose0.mp4" autoplay loop muted playsinline></video>
+              <video class="mc-slide" style="display:none" src="static/demos/original/canon_webpage/drawerclose1.mp4" loop muted playsinline></video>
+              <video class="mc-slide" style="display:none" src="static/demos/original/canon_webpage/drawerclose2.mp4" loop muted playsinline></video>
+            </div>
+            <div class="mc-nav">
+              <button class="mc-btn mc-prev" aria-label="Previous demo">&#8249;</button>
+              <span class="mc-counter">1 / 3</span>
+              <button class="mc-btn mc-next" aria-label="Next demo">&#8250;</button>
+            </div>
+          </div>
+        </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Analysis -->
+<section class="hero is-small">
+  <div class="hero-body" style="padding-top: 1rem;">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title">Analysis</h2>
+          <hr>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <h3 class="title is-4" style="margin-bottom: 0.4rem;">Linear decodability of azimuth</h3>
+          <p class="is-size-5">Canonical generalizes where view-invariant methods fail because it <b>preserves</b> viewpoint as a recoverable latent factor instead of discarding it. On MetaWorld, we freeze each encoder and fit a linear least-squares probe on its features to predict \(\cos\theta\) and \(\sin\theta\) of the camera azimuth \(\theta\) (the encoder is never updated), then place each sample at its predicted \((\cos,\sin)\).</p>
+        </div>
+      </div>
+      <div class="columns is-centered image-container" style="margin-top: 1rem;">
+        <div class="column is-four-fifths">
+          <figure class="image">
+            <img src="static/images/analysis_azimuth_prediction.png" alt="Linear decodability of camera azimuth from frozen features" style="width: 100%; height: auto;">
+          </figure>
+          <figcaption class="has-text-centered">Linear decodability of camera azimuth from frozen features: each point at its predicted \((\cos\theta, \sin\theta)\), colored by ground-truth azimuth (a viewpoint-aware encoder traces a rainbow-ordered circle). Canonical (left) recovers azimuth near-perfectly (\(R^2 = 1.00\)); VILA (right) with more scatter; ReViWo (center) collapses to a blob (\(R^2 \approx 0\)), reflecting its view-invariant objective.</figcaption>
+        </div>
+      </div>
+      <div class="columns is-centered" style="margin-top: 1.5rem;">
+        <div class="column is-four-fifths">
+          <h3 class="title is-4" style="margin-bottom: 0.4rem;">Reconstruction decoder probe</h3>
+          <p class="is-size-5">The same canonicalization is visible directly in pixel space. On the real xArm, we freeze each encoder and train a small decoder to invert the policy-facing feature back to an image with a pixel reconstruction loss; the encoder is never updated, so the decoder can only surface what the feature already encodes. At test time we decode each method's canonicalized feature and check whether it matches the shared canonical view.</p>
+        </div>
+      </div>
+      <div class="columns is-centered image-container" style="margin-top: 1rem;">
+        <div class="column is-four-fifths">
+          <figure class="image">
+            <img src="static/images/xarm_decoder.png?v=4" alt="xArm decoder probe: canonicalized features decoded back to images" style="width: 100%; height: auto;">
+          </figure>
+          <figcaption class="has-text-centered">xArm decoder probe. From each held-out camera, in-distribution (ID) and out-of-distribution (OOD), we decode each method's canonicalized features back to an image and compare it to the canonical ground-truth view (far left). Canonical is the only method that moves toward the canonical frame; ReViWo's view-invariant features collapse to blur, while VILA reproduces the original source view rather than canonicalizing it. Rows: drawer-close, pick-and-place, button-press.</figcaption>
+          <figure class="image" style="margin: 1.1rem auto 0; max-width: 360px;">
+            <img src="static/images/ssim_table.png?v=3" alt="Decoder Delta-SSIM by method (ID / OOD)" style="width: 100%; height: auto; display: block; margin: 0 auto;">
+          </figure>
+          <p class="has-text-centered is-size-7" style="margin-top: 0.45rem; color:#666;">&Delta;SSIM = SSIM(decoded, canonical) &minus; SSIM(decoded, source), mean over three tasks; positive means the reconstruction moves toward the canonical view.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Conclusion -->
+<section class="hero is-small">
+  <div class="hero-body">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title">Conclusion</h2>
+          <hr>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column is-size-5 is-four-fifths">
+          Canonical models camera viewpoint change as a rotation in SO(3), enabling visuomotor policies trained from a single viewpoint to generalize to unseen camera angles without calibration.
+          Three next steps follow directly from Canonical's learned latent operator rather than from explicit 3D geometry: making the self-calibrating angle predictor <b>uncertainty-aware</b>, predicting a distribution over the camera rotation instead of committing to a single point estimate; <b>fusing multiple cameras</b> by warping each view into the same canonical latent frame before combining their features; and <b>cross-dataset pretraining</b> around a shared semantic canonical pose, such as a frontal view relative to the robot base, rather than an arbitrary camera index defined separately per dataset. The same latent-operator formulation may be useful for other structured visual shifts, but this work studies camera viewpoint.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BibTeX -->
+<section class="hero is-small" id="BibTeX">
+  <div class="hero-body">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title">BibTeX</h2>
+          <pre><code>@inproceedings{yeung:2026:canon,
+  title={Canonical Observation Pretraining for Visuomotor Control},
+  author={Yuen-Hei Yeung and Chris Hoang and Zifan Zhao and Mengye Ren},
+  year={2026}
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+            You are free to borrow the source code of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="lab-attribution">
+    Part of the <a href="https://agenticlearning.ai/" target="_blank">Agentic Learning AI Lab</a> at New York University
+  </div>
+</footer>
+
+</body>
+</html>
