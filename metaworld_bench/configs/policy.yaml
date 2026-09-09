@@ -1,0 +1,103 @@
+# CANON Policy Training: MetaWorld
+# Method: DiTFlowSpatial BC with canonical-warp spatial features
+#
+# Required CLI overrides:
+#   dataset.task_name=dooropenv2         (or pushv2, assemblyv2, etc.)
+#   dataset.camera_ids=[6]               canonical view during BC training
+#   +encoder_path=/path/to/snapshot_epoch399.pt
+#
+# Tier logic: Easy/Medium (default below) vs Hard (assembly, pickplace).
+# For the Hard tier, add these CLI overrides:
+#   epochs=1000  model.goal_dim=3  model.num_inference_steps=30
+#   dataset.prop_goal=true  data.use_prop_goal=true
+
+module: canonpolicyspatial
+
+# ── Encoder ───────────────────────────────────────────────────────────────────
+# Frozen encoder is loaded at runtime from the pretrained snapshot:
+#   set via CLI  +encoder_path=/path/to/snapshot_epoch399.pt
+
+# ── Policy: DiTFlowSpatial ────────────────────────────────────────────────────
+model:
+  _target_: models.policy.DiTFlowSpatial
+  spatial_channel_dim: 512    # ResNet18 layer4 channels
+  n_spatial_tokens: 49        # 7×7 spatial map at 224×224 input
+  state_dim: 11               # ProprioFull: hand_pos(4) + prev_action(4) + EE_velocity(3)
+  goal_dim: 0                 # no goal conditioning (single-task); override to 3 for Hard tier
+  act_dim: 4                  # MetaWorld 4-DoF [Δx, Δy, Δz, gripper]
+  action_chunk: 4             # per-step action-chunk length
+  obs_window: 2
+  d_model: 256
+  n_layers: 8
+  n_heads: 8
+  dropout: 0.1
+  num_inference_steps: 10     # π0 standard; override to 30 for Hard tier
+
+# ── Data ──────────────────────────────────────────────────────────────────────
+data:
+  obs_window: 2
+  action_chunk: 4             # action-chunk length (n_action_steps=2 below)
+  use_libero_goal: false
+  use_prop_goal: false        # override to true for Hard tier
+
+n_action_steps: 2
+eval_window_size: 2
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
+dataset:
+  _target_: metaworld_bench.datasets.single_view.MetaworldSingleViewProprioFullDataset
+  data_directory: ${oc.env:CANON_DATA_ROOT,/path/to/canon_public_data}/metaworld/policy   # set CANON_DATA_ROOT env var
+  task_name: dooropenv2         # override per task: dataset.task_name=pushv2
+  camera_ids: [6]               # canonical view (azimuth=136°)
+  img_size: 224
+  normalize_actions: true
+  random_crop: true
+  crop_pad: 8
+  max_trajs: 50                 # community-standard 50 demos per task
+  include_prev_action: true
+  include_velocity: true
+  action_dim: 4
+  prop_goal: false              # override to true for Hard tier
+
+# ── Environment ───────────────────────────────────────────────────────────────
+env:
+  act_dim: 4
+  views: 1
+  gym:
+    _target_: metaworld_bench.envs.metaworld.MetaWorldBCEnvProprioFull
+    id: metaworld_bc           # env name string (read by PolicyTrainer)
+    task_name: ${dataset.task_name}   # follows dataset.task_name (single source)
+    camera_configs_path: ${dataset.data_directory}/camera_configs.json  # single json: training view (cam 6) + rollout eval views
+    mixed_view: true           # cycle through rollout cameras across eval episodes
+    image_size: 224
+    max_episode_steps: 200
+    include_prev_action: true
+    include_velocity: true
+    action_dim: 4
+
+# ── Training ──────────────────────────────────────────────────────────────────
+batch_size: 64
+epochs: 600                   # Easy/Medium tier; override to 1000 for Hard tier (assembly, pickplace)
+eval_freq: 100
+eval_on_env_freq: 100
+save_every: 100
+num_env_evals: 10
+num_final_evals: 10
+num_final_eval_per_goal: 1
+max_grad_norm: 1.0
+lr_warmup_steps: 1000
+seed: 42
+device: cuda
+train_fraction: 0.9            # train/val split (base-trainer default; MW BC uses 0.9)
+policy_view_idx: 0            # single-view policy input (camera_ids=[6] → index 0)
+save_path: ${hydra:runtime.output_dir}/checkpoints   # checkpoint root (under the hydra run dir)
+
+optim:
+  lr: 1.0e-4
+  weight_decay: 1.0e-3
+  betas: [0.9, 0.999]
+
+# ── WandB ─────────────────────────────────────────────────────────────────────
+wandb:
+  project: canon-metaworld-bc
+  entity: null    # set to your wandb entity

@@ -1,0 +1,6 @@
+[
+  {"id": 90, "azimuth": 255.0, "elevation": -65.0, "distance": 1.2, "lookat": [0.0, 0.5, 0.0], "type": "ood_extrap_aggressive", "label": "aggr_A_az255_el-65_d1.2"},
+  {"id": 91, "azimuth": 80.0,  "elevation": -90.0, "distance": 2.0, "lookat": [0.0, 0.5, 0.0], "type": "ood_extrap_aggressive", "label": "aggr_B_az80_el-90_d2.0"},
+  {"id": 92, "azimuth": 275.0, "elevation": -40.0, "distance": 3.0, "lookat": [0.0, 0.5, 0.0], "type": "ood_extrap_aggressive", "label": "aggr_C_az275_el-40_d3.0"},
+  {"id": 93, "azimuth": 120.0, "elevation": -30.0, "distance": 0.8, "lookat": [0.0, 0.5, 0.0], "type": "ood_extrap_aggressive", "label": "aggr_D_az120_el-30_d0.8"}
+]

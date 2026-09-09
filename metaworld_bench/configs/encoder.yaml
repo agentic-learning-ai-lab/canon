@@ -1,0 +1,83 @@
+# CANON Encoder Pretraining: MetaWorld
+# Method: SO(3)-6D rotation prediction + canonical-warp SpatialTransformer
+# Dataset: MetaworldGoalMultiViewDataset (0-based multi-view pool; canonical azimuth 136)
+
+module: canonencoder
+
+# ── Encoder ───────────────────────────────────────────────────────────────────
+encoder:
+  _target_: models.encoder.resnet18_spatial
+  pretrained: false
+  output_dim: 512
+  unit_norm: false
+
+# ── Rotation projector ────────────────────────────────────────────────────────
+# Maps 6D rot6d representation [B, 6] → rotation latent [B, 64]
+view_projector:
+  _target_: models.projector.MLP
+  input_dim: 6          # rot6d only (no log_dist)
+  hidden_sizes: [64]
+  output_dim: 64
+
+# ── SSL module (view dynamics + canonical warp) ────────────────────────────────
+view_ssl:
+  _target_: models.ssl.CANON_RotationSO3AnglePred_6D_Spatial
+  window_size: 2            # V=2 views per training pair
+  feature_dim: 512          # must match encoder.output_dim
+  projection_dim: 64        # must match view_projector.output_dim
+  n_layer: 4
+  n_head: 4
+  n_embd: 128
+  dropout: 0.0
+  covariance_reg_coef: 0.04
+  dynamics_loss_coef: 1.0
+  ema_beta: null
+  beta_scheduling: true
+  projector_use_ema: true
+  cov_reg_obs_proj: false
+  feat_dim: 512             # AnglePredictionHeadSO3 input channels
+  rotation_dim: 6           # rot6d only; must match view_projector.input_dim
+  spatial_d_model: 128      # SpatialTransformer internal dim (channel reduction 512→128)
+  lr: 2.0e-4
+  weight_decay: 0.0
+  betas: [0.9, 0.999]
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
+env:
+  dataset:
+    _target_: metaworld_bench.datasets.multi_view.MetaworldGoalMultiViewDataset
+    # Dir with trajectories.hdf5 + camera_configs.json (0-based pool; canonical azimuth 136).
+    data_directory: ${oc.env:CANON_DATA_ROOT,/path/to/canon_public_data}/metaworld/encoder
+    img_size: null                           # stored at 224×224; no resize
+
+# ── Training ──────────────────────────────────────────────────────────────────
+ssl_lr: 2.0e-4
+ssl_weight_decay: 0.0
+betas: [0.9, 0.999]
+batch_size: 256
+num_epochs: 500                # matches the reported run. Released encoder = epoch 400 (1-based, as
+                               # reported in the paper), selected by probe R^2. The file is
+                               # snapshot_epoch399.pt: snapshot filenames are 0-indexed.
+num_workers: 4
+save_every_epochs: 50
+clip_grad_norm: 0.1
+seed: 42
+train_fraction: 0.95
+
+# ── Loss weights ──────────────────────────────────────────────────────────────
+angle_loss_coef: 0.5
+canonical_loss_coef: 0.5
+cov_loss_coef: 1.0
+loss_warmup_epochs: 10       # epochs using only L_view + L_cov before enabling L_angle + L_canonical
+canonical_oversample_weight: 4.0
+use_enc_can_variance_reg: true
+
+# ── Base-trainer plumbing (read directly by utils/trainer.py) ─────────────────
+project: canon-metaworld      # wandb project name (top-level; used by init_trackers)
+sync_bn: true                 # SyncBatchNorm on encoder under multi-GPU DDP
+timeout_seconds: 18000        # accelerate process-group timeout (seconds)
+window_size: 5                # trajectory slice length T (TrajectorySlicerDataset)
+goal_conditional: null        # SSL pretraining: no goal conditioning
+min_future_sep: 0
+goal_seq_len: 0
+num_extra_predicted_actions: 0

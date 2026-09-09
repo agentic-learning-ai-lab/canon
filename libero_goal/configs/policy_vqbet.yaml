@@ -1,0 +1,94 @@
+# CANON VQ-BeT Policy: LIBERO Goal
+# Method: VQ-BeT with self-calibrating angle-prediction view canonicalization
+#
+# Required CLI overrides:
+#   +encoder_path=/path/to/snapshot_epoch39.pt
+
+module: canonpolicyvqbet
+
+# ── Encoder ───────────────────────────────────────────────────────────────────
+# Frozen encoder is loaded at runtime from the pretrained snapshot:
+#   set via CLI  +encoder_path=/path/to/snapshot_epoch39.pt
+
+# ── Policy: VQ-BeT (BehaviorTransformer) ─────────────────────────────────────
+# GPT-style transformer + discrete action tokenisation via VQ-VAE.
+# VQ-VAE groups=2, n_embed=16 → 256 discrete action codes.
+# Transformer: 6 layers, 120-dim hidden, 6 heads; matches encoder SSL transformer.
+model:
+  _target_: models.vq_behavior_transformer.bet.BehaviorTransformer
+  obs_dim: 512          # encoder.output_dim
+  act_dim: 7            # LIBERO 7-DoF joint velocity
+  goal_dim: 512         # encoder.output_dim (LIBERO has visual goal)
+  views: 1
+  vqvae_latent_dim: 512
+  vqvae_n_embed: 16
+  vqvae_groups: 2
+  vqvae_fit_steps: 884
+  vqvae_iters: 300
+  n_layer: 6
+  n_head: 6
+  n_embd: 120
+  vqvae_batch_size: 2048
+  act_scale: 1
+  obs_window_size: 10   # matches window_size below
+  act_window_size: 1
+  offset_loss_multiplier: 100
+
+# ── Data ──────────────────────────────────────────────────────────────────────
+window_size: 10
+eval_window_size: 10
+action_window_size: 1
+
+data:
+  window_size: 10
+  action_window_size: 1
+  obs_window: 10       # = window_size (canon trainer reads data.obs_window alias)
+  action_chunk: 1      # = action_window_size (n_action_steps default reads data.action_chunk)
+  vqbet_get_future_action_chunk: true
+  goal_conditional: future
+  future_seq_len: 10
+  use_libero_goal: true
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
+dataset:
+  _target_: libero_goal.datasets.single_view.LiberoGoalSingleViewDataset
+  data_directory: ${oc.env:CANON_DATA_ROOT,/path/to/canon_public_data}/libero_goal/policy   # set CANON_DATA_ROOT env var
+  img_size: 224
+
+# ── Environment ──────────────────────────────────────────────────────────────
+env:
+  gym:
+    _target_: libero_goal.envs.libero_env_perturb.LiberoEnvPerturb
+    id: libero_goal
+    view_indices: [-20, -15.45, -10, -5.83, 0, 4.05, 10, 15.18, 20, 25]  # fallback; overridden at runtime from policy camera_configs.json `pool` (single source)
+    view_interval: null
+    single_view: true
+    mixed_view: true    # cycle through 10 viewpoints across eval episodes
+    camera_distance: 1.3
+    image_size: 224
+  act_dim: 7
+  views: 1
+
+# ── Training ──────────────────────────────────────────────────────────────────
+batch_size: 64
+epochs: 50
+eval_freq: 10
+eval_on_env_freq: 10
+num_env_evals: 10
+num_final_evals: 10
+num_final_eval_per_goal: 10
+save_every: 100
+train_fraction: 0.9
+seed: 42
+device: cuda
+save_path: ${hydra:runtime.output_dir}/checkpoints   # checkpoint root (under the hydra run dir)
+
+optim:
+  lr: 5.5e-5
+  weight_decay: 2.0e-4
+  betas: [0.9, 0.999]
+
+# ── WandB ─────────────────────────────────────────────────────────────────────
+wandb:
+  project: canon-libero-bc
+  entity: null    # set to your wandb entity

@@ -1,0 +1,27 @@
+This directory vendors the LIBERO benchmark simulator and its assets.
+
+LIBERO — Liu et al., "LIBERO: Benchmarking Knowledge Transfer for Lifelong Robot
+Learning" (NeurIPS 2023). Released under the MIT License.
+Upstream: https://github.com/Lifelong-Robot-Learning/LIBERO
+
+The simulator is built on robosuite (MIT License,
+https://github.com/ARISE-Initiative/robosuite) and MuJoCo.
+
+Modifications by the CANON authors: the agent-view camera in
+`envs/problems/libero_tabletop_manipulation.py` was made a perturbable spherical
+camera (azimuth = view angle, fixed elevation/lookat, varying distance) to render
+the multi-view pretraining pool and the viewpoint-perturbed evaluation cameras.
+The 3D assets, BDDL task files, and init files under `assets/`, `bddl_files/`, and
+`init_files/` are redistributed unmodified from LIBERO. Please retain this notice
+and respect the upstream MIT licenses.
+
+`assets/` (410MB of meshes/textures) is not stored in this git repo; download it
+from the companion HF dataset and place it here:
+
+    huggingface-cli download agentic-learning-ai-lab/canonical \
+        --repo-type dataset --include "libero_sim_assets/*" \
+        --local-dir /tmp/libero_sim_assets
+    mv /tmp/libero_sim_assets/libero_sim_assets libero_goal/envs/assets
+
+(run from the repo root; `libero_goal/envs/assets/` must exist with this exact
+name for the simulator to find it)

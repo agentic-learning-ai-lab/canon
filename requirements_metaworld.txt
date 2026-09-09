@@ -1,0 +1,25 @@
+# MetaWorld environment (encoder pretraining + BC policy for MetaWorld).
+# Pinned to the versions used for the released results.
+torch==2.1.0
+torchvision==0.16.0
+numpy==1.26.4
+einops==0.8.2
+h5py==3.16.0
+scipy==1.15.3
+tqdm
+wandb==0.25.1
+hydra-core==1.3.2
+omegaconf==2.3.0
+accelerate==1.13.0
+transformers==4.40.0
+Pillow
+imageio==2.37.3
+imageio-ffmpeg==0.6.0
+# Simulator (matches the ReViWo env used for the released MetaWorld results).
+mujoco==2.3.7
+gymnasium @ git+https://github.com/Farama-Foundation/Gymnasium.git@3a151989a2aaa1bf5f321ca0b3b9d6a0e456fc95
+# NOTE: metaworld is installed as a SEPARATE second step (see README), because its own
+# gymnasium requirement floats to the Farama git HEAD and would otherwise override the pinned
+# gymnasium above and pull mujoco>=3.0.0. Install it after this file with:
+#   pip install --no-deps git+https://github.com/Farama-Foundation/Metaworld.git@83ac03ca3207c0060112bfc101393ca794ebf1bd
+# (PyPI metaworld==2.0.0 is a DIFFERENT package that requires mujoco>=3.0.0 — do not use it.)

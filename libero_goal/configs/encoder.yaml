@@ -1,0 +1,79 @@
+# CANON Encoder Pretraining: LIBERO Goal
+# Method: SO(2) rotation prediction + canonical-warp forward dynamics
+# Dataset: LiberoGoalMultiViewDatasetAngle (farther camera, ±20° random azimuth)
+
+module: canonencoder
+
+# ── Encoder ───────────────────────────────────────────────────────────────────
+encoder:
+  _target_: models.encoder.resnet18
+  pretrained: false
+  output_dim: 512
+
+# ── Rotation projector ────────────────────────────────────────────────────────
+# Maps SO(2) flat representation [cos θ, -sin θ, sin θ, cos θ] → rotation latent [B, 64]
+view_projector:
+  _target_: models.projector.MLP
+  input_dim: 4          # SO(2): 2×2 matrix flattened = 4 scalars
+  hidden_sizes: [64]    # one hidden layer; overrides base default [] (linear-only)
+  output_dim: 64        # overrides base default 16; richer rotation conditioning
+
+# ── SSL module (view dynamics + canonical warp) ────────────────────────────────
+view_ssl:
+  _target_: models.ssl.CANON_RotationSO2AnglePred
+  window_size: 2            # V=2 views per training pair
+  feature_dim: 512          # must match encoder.output_dim
+  projection_dim: 64        # must match view_projector.output_dim
+  n_layer: 6                # doubled from base default 3; more capacity for canonical warp
+  n_head: 6                 # n_embd/n_head = 120/6 = 20 per head
+  n_embd: 120               # doubled from base default 60
+  dropout: 0.0
+  covariance_reg_coef: 0.04
+  dynamics_loss_coef: 1.0
+  ema_beta: null
+  beta_scheduling: true
+  projector_use_ema: true
+  cov_reg_obs_proj: false
+  feat_dim: 512             # AnglePredictionHead input width = GAP feature dim (LIBERO uses resnet18, not the spatial variant); must match encoder.output_dim
+  lr: 1.0e-4
+  weight_decay: 0.0
+  betas: [0.9, 0.999]
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
+env:
+  dataset:
+    _target_: libero_goal.datasets.multi_view.LiberoGoalMultiViewDatasetAngle
+    # Dir with trajectories.hdf5 + camera_configs.json (0-based pool ids; canonical azimuth 0°).
+    data_directory: ${oc.env:CANON_DATA_ROOT,/path/to/canon_public_data}/libero_goal/encoder
+    img_size: 224
+
+# ── Training ──────────────────────────────────────────────────────────────────
+ssl_lr: 1.0e-4
+ssl_weight_decay: 0.0
+betas: [0.9, 0.999]
+batch_size: 128
+num_epochs: 60                 # matches the reported run. Released encoder = epoch 40 (1-based, as
+                               # reported in the paper), selected by probe R^2. The file is
+                               # snapshot_epoch39.pt: snapshot filenames are 0-indexed.
+num_workers: 4
+save_every_epochs: 10
+clip_grad_norm: 0.1
+seed: 42
+train_fraction: 0.95
+
+# ── Loss weights ──────────────────────────────────────────────────────────────
+angle_loss_coef: 0.5
+canonical_loss_coef: 1.0
+cov_loss_coef: 1.0
+loss_warmup_epochs: 5
+canonical_oversample_weight: 1.0   # canonical oversampling disabled (1.0 = neutral)
+
+# ── Base-trainer plumbing (read directly by utils/trainer.py) ─────────────────
+project: canon-libero         # wandb project name (top-level; used by init_trackers)
+sync_bn: true                 # SyncBatchNorm on encoder under multi-GPU DDP
+timeout_seconds: 18000        # accelerate process-group timeout (seconds)
+window_size: 5                # trajectory slice length T (TrajectorySlicerDataset)
+goal_conditional: null        # SSL pretraining: no goal conditioning
+min_future_sep: 0
+goal_seq_len: 0
+num_extra_predicted_actions: 0

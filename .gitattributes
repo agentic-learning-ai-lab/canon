@@ -1,0 +1,3 @@
+# Vendored LIBERO simulator (3D scene/object assets + wrapper code): excluded from
+# GitHub's language stats, not part of this project's own codebase.
+libero_goal/envs/** linguist-vendored

@@ -1,0 +1,96 @@
+# CANON DiTFlow Policy: LIBERO Goal
+# Method: DiTFlowPolicy with angle-prediction view canonicalization
+#
+# Required CLI overrides:
+#   +encoder_path=/path/to/snapshot_epoch39.pt
+# Data: libero_goal/policy: 0°-only canonical view.
+# Trains on the 0° view; eval perturbs the camera across view_indices.
+
+module: canonpolicyditflow
+
+# ── Encoder ───────────────────────────────────────────────────────────────────
+# Frozen encoder is loaded at runtime from the pretrained snapshot:
+#   set via CLI  +encoder_path=/path/to/snapshot_epoch39.pt
+
+# Index of the view to use for policy input.
+# LiberoGoalSingleViewDataset exposes V=1 → only valid index is 0.
+policy_view_idx: 0
+
+# ── Policy: DiTFlowPolicy ─────────────────────────────────────────────────────
+# Sequence length: obs_window(10) + goal(1) + t(1) + action_chunk(1) = 13 tokens.
+# ~4M parameters; closely matched to VQ-BeT's 4.3M param policy.
+model:
+  _target_: models.policy.DiTFlowPolicy
+  obs_dim: 512        # encoder.output_dim
+  goal_dim: 512       # encoder.output_dim (LIBERO has visual goal)
+  act_dim: 7          # LIBERO 7-DoF joint velocity
+  action_chunk: 1
+  obs_window: 10
+  d_model: 224
+  n_layers: 4
+  n_heads: 4
+  dropout: 0.1
+  num_inference_steps: 50
+
+# Re-plan every step: fully reactive, eliminates open-loop covariate shift.
+n_action_steps: 1
+action_window_size: ${data.action_chunk}   # eval rollout reads top-level cfg.action_window_size (=1)
+eval_window_size: 10
+
+# ── Data ──────────────────────────────────────────────────────────────────────
+data:
+  obs_window: 10
+  action_chunk: 1
+  use_libero_goal: true
+  # DynaMo-slicer params read by the LIBERO policy trainer (TrajectorySlicerDataset):
+  window_size: ${data.obs_window}            # obs context window = 10
+  action_window_size: ${data.action_chunk}   # action prediction window = 1
+  vqbet_get_future_action_chunk: false       # DiT: single-step (no VQ-BeT future-chunk slicing)
+  goal_conditional: null                     # goal = dataset last-frame view (use_libero_goal), not future-sampled
+  future_seq_len: 0
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
+dataset:
+  _target_: libero_goal.datasets.single_view.LiberoGoalSingleViewDataset
+  data_directory: ${oc.env:CANON_DATA_ROOT,/path/to/canon_public_data}/libero_goal/policy   # set CANON_DATA_ROOT env var
+  img_size: 224
+
+# ── Environment ──────────────────────────────────────────────────────────────
+env:
+  gym:
+    _target_: libero_goal.envs.libero_env_perturb.LiberoEnvPerturb
+    id: libero_goal
+    view_indices: [-20, -15.45, -10, -5.83, 0, 4.05, 10, 15.18, 20, 25]  # fallback; overridden at runtime from policy camera_configs.json `pool` (single source)
+    view_interval: null
+    single_view: true
+    mixed_view: true        # cycle through 10 viewpoints across eval episodes
+    camera_distance: 1.3
+    image_size: 224
+  act_dim: 7
+  views: 1
+
+# ── Training ──────────────────────────────────────────────────────────────────
+batch_size: 64
+epochs: 200
+eval_freq: 10
+eval_on_env_freq: 50
+num_env_evals: 10
+num_final_evals: 10
+num_final_eval_per_goal: 10
+save_every: 50
+train_fraction: 0.9
+max_grad_norm: 1.0
+lr_warmup_steps: 800
+seed: 42
+device: cuda
+save_path: ${hydra:runtime.output_dir}/checkpoints   # checkpoint root (under the hydra run dir)
+
+optim:
+  lr: 1.0e-4
+  weight_decay: 2.0e-4
+  betas: [0.9, 0.999]
+
+# ── WandB ─────────────────────────────────────────────────────────────────────
+wandb:
+  project: canon-libero-bc
+  entity: null    # set to your wandb entity

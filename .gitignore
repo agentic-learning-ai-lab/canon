@@ -1,0 +1,9 @@
+# Generated run artifacts
+outputs/
+wandb/
+__pycache__/
+*.pyc
+test/
+
+# Downloaded separately, see libero_goal/envs/NOTICE
+libero_goal/envs/assets/
